@@ -1,0 +1,35 @@
+{{- range $key, $value := .Values.docs }}
+{{- with $ -}}
+{{- if $value.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $key }}-offline-docs
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ $key }}-offline-docs
+spec:
+  selector:
+    matchLabels:
+      app: {{ $key }}-offline-docs
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: {{ $key }}-offline-docs
+    spec:
+      containers:
+        - name: {{ $key }}-offline-docs
+          image: {{ template "system_default_registry" . }}{{ $value.image.name }}:{{ $value.image.tag | default .Values.defaults.image.tag }}
+          imagePullPolicy: Always
+          securityContext:
+            runAsUser: {{ $value.uid | default .Values.defaults.uid }}
+          ports:
+            - name: http
+              containerPort: {{ $value.containerPort | default .Values.defaults.containerPort }}
+{{- end }}
+{{- end -}}
+{{- end }}
