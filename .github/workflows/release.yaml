@@ -32,19 +32,26 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: install yq
+        run: sudo apt-get install yq
+
       - name: package helm chart
         run: helm package .
-        env:
-          REPO: ${{ github.repository }}
+
+      - name: get helm chart name
+        run: |
+          CHART_NAME=$(helm show chart . | yq .name)
+          echo "CHART_NAME=$CHART_NAME" >> $GITHUB_ENV
 
       - name: upload chart to release artifacts
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          CHART_NAME: ${{ env.CHART_NAME }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./${{ github.event.repository.name }}-${{ github.ref_name }}.tgz
-          asset_name: ${{ github.event.repository.name }}-${{ github.ref_name }}.tgz
+          asset_path: ./${{ env.CHART_NAME }}-${{ github.ref_name }}.tgz
+          asset_name: ${{ env.CHART_NAME }}-${{ github.ref_name }}.tgz
           asset_content_type: application/tar
 
 #      - name: generate helm index
