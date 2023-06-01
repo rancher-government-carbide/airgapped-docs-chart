@@ -14,6 +14,8 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v3
+        with:
+          ref: main
 
       - name: release
         uses: actions/create-release@v1
@@ -35,28 +37,28 @@ jobs:
       - name: package helm chart
         run: helm package .
 
+      - name: install yq
+        run: |
+          VERSION=v4.34.1
+          BINARY=yq_linux_amd64
+          curl -Lo yq https://github.com/mikefarah/yq/releases/download/$VERSION/$BINARY && chmod +x yq
+
       - name: get helm chart name
-        id: helm_chart_name
-        uses: mikefarah/yq@master
-        with:
-          cmd: helm show chart . | yq .name
+        run: |
+          CHART_NAME=$(helm show chart . | yq .name)
+          echo "CHART_NAME=$CHART_NAME" >> $GITHUB_ENV
 
       - name: upload chart to release artifacts
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          CHART_NAME: ${{ env.CHART_NAME }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./${{ steps.helm_chart_name.output.result }}-${{ github.ref_name }}.tgz
-          asset_name: ${{ steps.helm_chart_name.output.result }}-${{ github.ref_name }}.tgz
-          asset_content_type: application/tar
+          asset_path: ./${{ env.CHART_NAME }}-${{ github.ref_name }}.tgz
+          asset_name: ${{ env.CHART_NAME }}-${{ github.ref_name }}.tgz
+          asset_content_type: application/x-tar
 
 
-# - name: get helm chart name
-#   run: |
-#     CHART_NAME=$(helm show chart . | yq .name)
-#     echo "CHART_NAME=$CHART_NAME" >> $GITHUB_ENV
 
 #      - name: generate helm index
 #        run: helm repo index $REPO --url $UPLOAD_URL --merge carbide-charts/index.yaml
